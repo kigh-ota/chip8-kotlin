@@ -15,9 +15,9 @@ import java.io.File
 
 val log = LoggerFactory.getLogger("Main")
 
-// Keyboard
-// Display
-class Display(private val primaryStage: Stage) {
+// Keyboard TODO
+
+class Display(primaryStage: Stage) {
     companion object {
         private const val WIDTH = 64u
         private const val HEIGHT = 32u
@@ -31,7 +31,7 @@ class Display(private val primaryStage: Stage) {
     private val buffer: UByteArray
 
     init {
-        buffer = UByteArray(bufferSize) { (0b00000000u..0b11111111u).random().toUByte() }
+        buffer = UByteArray(bufferSize) { 0u }
         val root = Group()
         val canvas = Canvas((WIDTH * PIXEL_SIZE).toDouble(), (HEIGHT * PIXEL_SIZE).toDouble())
         gc = canvas.graphicsContext2D
@@ -108,18 +108,15 @@ class Display(private val primaryStage: Stage) {
 
 class Chip8Interpreter : Application() {
     // Memory
-    /**
-     * 0x000-0x1FF should store font sprite sets
-     */
-    val MEMORY_SIZE = 0x1000u
+    val MEMORY_SIZE = 0x1000u // 4KiB RAM
     val MEMORY_PROGRAM_START = 0x200u
     val MEMORY_FONTSET_START = 0x000u
     val FONT_SPRITE_SIZE = 0x5u
-    val memory = UByteArray(MEMORY_SIZE.toInt()) // 4KiB RAM
+    val memory = UByteArray(MEMORY_SIZE.toInt())
 
     // Registers
-    val REGISTER_SIZE = 0x10
-    val V = UByteArray(REGISTER_SIZE) // 16 general purpose 8-bit registers (VF is the carry flag)
+    val REGISTER_SIZE = 0x10 // 16 general purpose 8-bit registers (VF is the carry flag)
+    val V = UByteArray(REGISTER_SIZE)
     var I: UShort =
         0x0000u // used to store memory addresses, so only the lowest (rightmost) 12 bits are usually used
     var PC: UShort = 0x0000u // 16-bit program counter
@@ -128,8 +125,8 @@ class Chip8Interpreter : Application() {
     }
 
     var SP: UByte = 0x00u // 8-bit stack pointer
-    val STACK_SIZE = 0x10
-    val stack = UShortArray(STACK_SIZE) // 16 stacks
+    val STACK_SIZE = 0x10 // 16 stacks
+    val stack = UShortArray(STACK_SIZE)
 
     lateinit var display: Display
 
@@ -142,14 +139,14 @@ class Chip8Interpreter : Application() {
         }
         display = Display(primaryStage)
         // Set up render system and register input callbacks
-//    setupGraphics();
-//    setupInput();
+        // setupGraphics();
+        // setupInput();
 
         // Initialize the Chip8 system and load the game into the memory
-//    myChip8.initialize();
+        // myChip8.initialize();
         initializeCpu()
 
-        val timer = Timeline(KeyFrame(Duration.millis(100.0), EventHandler {
+        val timer = Timeline(KeyFrame(Duration.millis(1000.0 / 60.0), EventHandler {
             val opcode = fetchOpcodeAt(PC)
             progressPC()
             val instruction = Instruction.get(opcode)
@@ -167,13 +164,21 @@ class Chip8Interpreter : Application() {
             }
             executeInstruction(instruction, opcode)
 
-//            if (shouldFlushDisplay) {
-//                flush()
-//                shouldFlushDisplay = false
-//            }
-            display.flush()
+            if (shouldFlushDisplay) {
+                display.flush()
+                shouldFlushDisplay = false
+            }
+
+            if (DT > 0u) {
+                DT--
+            }
+            if (ST > 0u) {
+                ST--
+                // TODO beep
+            }
+
             // Store key press state (Press and Release)
-//        myChip8.setKeys();
+            // myChip8.setKeys();
         }))
         timer.cycleCount = Timeline.INDEFINITE
         timer.play()
