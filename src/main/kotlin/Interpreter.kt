@@ -30,7 +30,7 @@ class Interpreter(private val display: Display, private val keyboard: Keyboard) 
             0xF0u, 0x80u, 0xF0u, 0x80u, 0x80u  // F
         )
         private const val STACK_SIZE = 0x10 // 16 stacks
-        private const val TARGET_FREQ = 500
+        private const val TARGET_FREQ = 500u
     }
 
     private val mem = UByteArray(MEMORY_SIZE)
@@ -55,6 +55,7 @@ class Interpreter(private val display: Display, private val keyboard: Keyboard) 
 
     private var shouldFlushDisplay = false
     private var prevKeyState: UShort = 0x00u
+    private var cycleCount = 0u
 
     private val log = LoggerFactory.getLogger(javaClass.name)
 
@@ -69,20 +70,19 @@ class Interpreter(private val display: Display, private val keyboard: Keyboard) 
         loadROM(romFile)
         dumpMemory()
 
-        var c = 0
         var t = System.currentTimeMillis()
         scheduledFuture = Executors.newScheduledThreadPool(0)
             .scheduleAtFixedRate({
                 cycle()
-                c++
-                if (c % TARGET_FREQ == 0) {
+                cycleCount++
+                if (cycleCount % TARGET_FREQ == 0u) {
                     val u = System.currentTimeMillis()
                     val d = u - t
-                    val fps = 1000.0 * TARGET_FREQ / d
+                    val fps = 1000.0 * TARGET_FREQ.toDouble() / d
                     log.debug("$fps fps")
                     t = u
                 }
-             }, 0L, 1000000L / TARGET_FREQ, TimeUnit.MICROSECONDS)
+             }, 0L, 1000000L / TARGET_FREQ.toInt(), TimeUnit.MICROSECONDS)
     }
 
     fun stop() {
@@ -119,17 +119,15 @@ class Interpreter(private val display: Display, private val keyboard: Keyboard) 
             shouldFlushDisplay = false
         }
 
-        // TODO decrements at 60Hz
-        if (DT > 0u) {
-            DT--
+        if (cycleCount % (TARGET_FREQ / 60u) == 0u) {
+            if (DT > 0u) {
+                DT--
+            }
+            if (ST > 0u) {
+                ST--
+                // TODO beep
+            }
         }
-        if (ST > 0u) {
-            ST--
-            // TODO beep
-        }
-
-        // Store key press state (Press and Release)
-        // myChip8.setKeys();
     }
 
     private fun logCurrentInstruction(opcode: UShort, instruction: Instruction) {
