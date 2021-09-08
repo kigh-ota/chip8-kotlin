@@ -6,7 +6,7 @@ import javafx.scene.paint.Color
 import javafx.stage.Stage
 
 @ExperimentalUnsignedTypes
-class JavaFXDisplay(primaryStage: Stage) : Display() {
+class JavaFXDisplay(root: Group) : Display() {
     companion object {
         private const val PIXEL_SIZE = 8u
         private const val BUFFER_SIZE_X = 8u // WIDTH / 8
@@ -17,13 +17,10 @@ class JavaFXDisplay(primaryStage: Stage) : Display() {
     private val buffer: UByteArray = UByteArray(BUFFER_SIZE) { 0u }
 
     init {
-        val root = Group()
         val canvas = Canvas((WIDTH * PIXEL_SIZE).toDouble(), (HEIGHT * PIXEL_SIZE).toDouble())
         gc = canvas.graphicsContext2D
         flush()
         root.children.add(canvas)
-        primaryStage.scene = Scene(root)
-        primaryStage.show()
     }
 
     override fun init() {

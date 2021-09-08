@@ -5,13 +5,14 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 @ExperimentalUnsignedTypes
-class Interpreter(private val display: Display) {
+class Interpreter(private val display: Display, private val keyboard: Keyboard) {
     companion object {
         private const val MEMORY_SIZE = 0x1000 // 4KiB RAM
         private const val MEMORY_PROGRAM_START = 0x200u
         private const val MEMORY_FONT_SET_START = 0x000u
         private const val FONT_SPRITE_SIZE = 0x5u
         private const val STACK_SIZE = 0x10 // 16 stacks
+        private const val TARGET_FREQ = 500
     }
 
     private val mem = UByteArray(MEMORY_SIZE)
@@ -20,8 +21,11 @@ class Interpreter(private val display: Display) {
     private val V = UByteArray(0x10) // 16 general purpose 8-bit registers (VF is the carry flag)
     private var I: UShort = 0x0000u // used to store memory addresses
     private var PC: UShort = 0x0000u // 16-bit program counter
-    private fun progressPC() {
+    private fun incrementPC() {
         PC = PC.plus(2u).toUShort()
+    }
+    private fun decrementPC() {
+        PC = PC.minus(2u).toUShort()
     }
 
     private var SP: UByte = 0x00u // 8-bit stack pointer
@@ -32,6 +36,7 @@ class Interpreter(private val display: Display) {
     private var ST: UByte = 0x00u // sound timer register
 
     private var shouldFlushDisplay = false
+    private var prevKeyState: UShort = 0x00u
 
     private val log = LoggerFactory.getLogger(javaClass.name)
 
@@ -52,14 +57,14 @@ class Interpreter(private val display: Display) {
             .scheduleAtFixedRate({
                 cycle()
                 c++
-                if (c % 60 == 0) {
+                if (c % TARGET_FREQ == 0) {
                     val u = System.currentTimeMillis()
                     val d = u - t
-                    val fps = 60.0 / d * 1000
+                    val fps = 1000.0 * TARGET_FREQ / d
                     log.debug("$fps fps")
                     t = u
                 }
-             }, 0L, 1000000 / 60, TimeUnit.MICROSECONDS)
+             }, 0L, 1000000L / TARGET_FREQ, TimeUnit.MICROSECONDS)
     }
 
     fun stop() {
@@ -83,16 +88,18 @@ class Interpreter(private val display: Display) {
 
     private fun cycle() {
         val opcode = fetchOpcodeAt(PC)
-        progressPC()
+        incrementPC()
         val instruction = Instruction.fromOpcode(opcode)
         logCurrentInstruction(opcode, instruction)
         executeInstruction(instruction, opcode)
+        prevKeyState = keyboard.pressed
 
         if (shouldFlushDisplay) {
             display.flush()
             shouldFlushDisplay = false
         }
 
+        // TODO decrements at 60Hz
         if (DT > 0u) {
             DT--
         }
@@ -185,19 +192,19 @@ class Interpreter(private val display: Display) {
             Instruction.M3xkk_SE -> {
                 //Skip next instruction if Vx = kk.
                 if (V[x] == kk) {
-                    progressPC()
+                    incrementPC()
                 }
             }
             Instruction.M4xkk_SNE -> {
                 //Skip next instruction if Vx != kk.
                 if (V[x] != kk) {
-                    progressPC()
+                    incrementPC()
                 }
             }
             Instruction.M5xy0_SE -> {
                 //Skip next instruction if Vx = Vy.
                 if (V[x] == V[y]) {
-                    progressPC()
+                    incrementPC()
                 }
             }
             Instruction.M6xkk_LD -> {
@@ -254,7 +261,7 @@ class Interpreter(private val display: Display) {
             Instruction.M9xy0_SNE -> {
                 //Skip next instruction if Vx != Vy.
                 if (V[x] != V[y]) {
-                    progressPC()
+                    incrementPC()
                 }
             }
             Instruction.MAnnn_LD -> {
@@ -284,14 +291,15 @@ class Interpreter(private val display: Display) {
             }
             Instruction.MEx9E_SKP -> {
                 //Skip next instruction if key with the value of Vx is pressed.
-                //
-                //TODO Checks the keyboard, and if the key corresponding to the value of Vx is currently in the down position, PC is increased by 2.
+                if (keyboard.isPressed(V[x])) {
+                    incrementPC()
+                }
             }
             Instruction.MExA1_SKNP -> {
                 //Skip next instruction if key with the value of Vx is not pressed.
-                //
-                //TODO Checks the keyboard, and if the key corresponding to the value of Vx is currently in the up position, PC is increased by 2.
-                progressPC()
+                if (!keyboard.isPressed(V[x])) {
+                    incrementPC()
+                }
             }
             Instruction.MFx07_LD -> {
                 //Fx07 - LD Vx, DT
@@ -303,9 +311,18 @@ class Interpreter(private val display: Display) {
             Instruction.MFx0A_LD -> {
                 //Fx0A - LD Vx, K
                 //Wait for a key press, store the value of the key in Vx.
-                //
-                //TODO All execution stops until a key is pressed, then the value of that key is stored in Vx.
-                V[x] = 0x0u
+                val currentKeyState = keyboard.pressed
+                val justPressed = currentKeyState.toUInt() and prevKeyState.toUInt().inv()
+                if (justPressed > 0u) {
+                    for (i in 0..15) {
+                        if (justPressed and (0x01u shl i) > 0u) {
+                            V[x] = i.toUByte()
+                            break
+                        }
+                    }
+                } else {
+                    decrementPC()
+                }
             }
             Instruction.MFx15_LD -> {
                 //Set delay timer = Vx.
