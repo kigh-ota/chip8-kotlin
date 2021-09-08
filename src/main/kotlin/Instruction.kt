@@ -36,22 +36,22 @@ enum class Instruction(val mnemonic: String) {
     MFx65_LD("LD");
 
     companion object {
-        fun get(opcode: UShort): Instruction { // opcode is 2-Byte long
+        fun fromOpcode(opcode: UShort): Instruction { // opcode is 2-Byte long
             val opcodeInt = opcode.toUInt()
-            return when {
-                opcodeInt in 0x0000u..0x0FFFu -> when (opcodeInt) {
+            return when (opcodeInt) {
+                in 0x0000u..0x0FFFu -> when (opcodeInt) {
                     0x00E0u -> M00E0_CLS
                     0x00EEu -> M00EE_RET
                     else -> M0nnn_SYS
                 }
-                opcodeInt in 0x1000u..0x1FFFu -> M1nnn_JP
-                opcodeInt in 0x2000u..0x2FFFu -> M2nnn_CALL
-                opcodeInt in 0x3000u..0x3FFFu -> M3xkk_SE
-                opcodeInt in 0x4000u..0x4FFFu -> M4xkk_SNE
-                opcodeInt in 0x5000u..0x5FFFu -> M5xy0_SE
-                opcodeInt in 0x6000u..0x6FFFu -> M6xkk_LD
-                opcodeInt in 0x7000u..0x7FFFu -> M7xkk_ADD
-                opcodeInt in 0x8000u..0x8FFFu -> when (opcodeInt and 0x000Fu) {
+                in 0x1000u..0x1FFFu -> M1nnn_JP
+                in 0x2000u..0x2FFFu -> M2nnn_CALL
+                in 0x3000u..0x3FFFu -> M3xkk_SE
+                in 0x4000u..0x4FFFu -> M4xkk_SNE
+                in 0x5000u..0x5FFFu -> M5xy0_SE
+                in 0x6000u..0x6FFFu -> M6xkk_LD
+                in 0x7000u..0x7FFFu -> M7xkk_ADD
+                in 0x8000u..0x8FFFu -> when (opcodeInt and 0x000Fu) {
                     0x0u -> M8xy0_LD
                     0x1u -> M8xy1_OR
                     0x2u -> M8xy2_AND
@@ -63,17 +63,17 @@ enum class Instruction(val mnemonic: String) {
                     0xEu -> M8xyE_SHL
                     else -> throw UnknownInstructionException(opcode)
                 }
-                opcodeInt in 0x9000u..0x9FFFu -> M9xy0_SNE
-                opcodeInt in 0xA000u..0xAFFFu -> MAnnn_LD
-                opcodeInt in 0xB000u..0xBFFFu -> MBnnn_JP
-                opcodeInt in 0xC000u..0xCFFFu -> MCxkk_RND
-                opcodeInt in 0xD000u..0xDFFFu -> MDxyn_DRW
-                opcodeInt in 0xE000u..0xEFFFu -> when (opcodeInt and 0x00FFu) {
+                in 0x9000u..0x9FFFu -> M9xy0_SNE
+                in 0xA000u..0xAFFFu -> MAnnn_LD
+                in 0xB000u..0xBFFFu -> MBnnn_JP
+                in 0xC000u..0xCFFFu -> MCxkk_RND
+                in 0xD000u..0xDFFFu -> MDxyn_DRW
+                in 0xE000u..0xEFFFu -> when (opcodeInt and 0x00FFu) {
                     0x9Eu -> MEx9E_SKP
                     0xA1u -> MExA1_SKNP
                     else -> throw UnknownInstructionException(opcode)
                 }
-                opcodeInt in 0xF000u..0xFFFFu -> when (opcodeInt and 0x00FFu) {
+                in 0xF000u..0xFFFFu -> when (opcodeInt and 0x00FFu) {
                     0x07u -> MFx07_LD
                     0x0Au -> MFx0A_LD
                     0x15u -> MFx15_LD
