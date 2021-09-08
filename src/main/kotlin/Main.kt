@@ -2,7 +2,6 @@ import Instruction.*
 import javafx.animation.KeyFrame
 import javafx.animation.Timeline
 import javafx.application.Application
-import javafx.event.EventHandler
 import javafx.scene.Group
 import javafx.scene.Scene
 import javafx.scene.canvas.Canvas
@@ -146,22 +145,11 @@ class Chip8Interpreter : Application() {
         // myChip8.initialize();
         initializeCpu()
 
-        val timer = Timeline(KeyFrame(Duration.millis(1000.0 / 60.0), EventHandler {
+        val timer = Timeline(KeyFrame(Duration.millis(1000.0 / 60.0), {
             val opcode = fetchOpcodeAt(PC)
             progressPC()
             val instruction = Instruction.get(opcode)
-            if (log.isTraceEnabled) {
-                log.trace(
-                    "PC=${PC.toUInt().toString(16)},opcode=${
-                        opcode.toUInt().toString(16)
-                    }; ${instruction.mnemonic}\t${
-                        Instruction.getParameters(
-                            instruction,
-                            opcode
-                        ).joinToString("\t")
-                    }"
-                )
-            }
+            logCurrentInstruction(opcode, instruction)
             executeInstruction(instruction, opcode)
 
             if (shouldFlushDisplay) {
@@ -182,6 +170,21 @@ class Chip8Interpreter : Application() {
         }))
         timer.cycleCount = Timeline.INDEFINITE
         timer.play()
+    }
+
+    private fun logCurrentInstruction(opcode: UShort, instruction: Instruction) {
+        if (log.isTraceEnabled) {
+            log.trace(
+                "PC=${PC.toUInt().toString(16)},opcode=${
+                    opcode.toUInt().toString(16)
+                }; ${instruction.mnemonic}\t${
+                    Instruction.getParameters(
+                        instruction,
+                        opcode
+                    ).joinToString("\t")
+                }"
+            )
+        }
     }
 
     private fun initializeCpu() {
@@ -240,7 +243,7 @@ class Chip8Interpreter : Application() {
                 if (SP == 0.toUByte()) {
                     throw IllegalStateException()
                 }
-                PC = stack[SP.toInt()]
+                PC = stack[SP.toInt() - 1]
                 SP--
             }
             M0nnn_SYS -> {
@@ -415,12 +418,16 @@ class Chip8Interpreter : Application() {
             MFx55_LD -> {
                 //Store registers V0 through Vx in memory starting at location I.
                 val i = I.toInt()
-                repeat(x) { j -> memory[i + j] = V[j] }
+                for (j in 0..x) {
+                    memory[i + j] = V[j]
+                }
             }
             MFx65_LD -> {
                 //Read registers V0 through Vx from memory starting at location I.
                 val i = I.toInt()
-                repeat(x) { j -> V[j] = memory[i + j] }
+                for (j in 0..x) {
+                    V[j] = memory[i + j]
+                }
             }
         }
     }
