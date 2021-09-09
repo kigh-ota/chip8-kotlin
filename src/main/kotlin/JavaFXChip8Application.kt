@@ -1,7 +1,6 @@
 import javafx.application.Application
 import javafx.scene.Group
 import javafx.scene.Scene
-import javafx.scene.input.KeyCode
 import javafx.stage.FileChooser
 import javafx.stage.FileChooser.ExtensionFilter
 import javafx.stage.Stage
@@ -19,7 +18,7 @@ class JavaFXChip8Application : Application() {
         val root = Group()
         val display = JavaFXDisplay(root)
         val scene = Scene(root)
-        val keyboard = Keyboard(scene)
+        val keyboard = JavaFXKeyboard(scene)
 
         primaryStage.scene = scene
         primaryStage.show()
