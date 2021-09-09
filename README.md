@@ -1,8 +1,10 @@
 A [CHIP-8](https://en.wikipedia.org/wiki/CHIP-8) interpreter written in Kotlin.
 
-- Kotlin
-- Gradle
-- JavaFX
+- Language: Kotlin
+- Build Tool: Gradle
+- Display: JavaFX
+- Keyboard: JavaFX
+- Sound: TODO
 
 # References
 
