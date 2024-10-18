@@ -16,5 +16,5 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("ch.qos.logback:logback-classic:1.2.5")
+    implementation("ch.qos.logback:logback-classic:1.5.11")
 }
